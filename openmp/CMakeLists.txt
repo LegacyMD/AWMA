@@ -8,6 +8,7 @@ set(SOURCES
     parameters.h
     random.cpp
     random.h
+    timer.h
 )
 
 source_group (TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

@@ -6,7 +6,7 @@ struct Parameters {
     Coordinate minY = 0;
     Coordinate maxY = 50;
 
-    size_t numberOfPoints = 3000;
+    size_t numberOfPoints = 10000;
     size_t numberOfClusters = 20;
     size_t maxIterations = 30;
 

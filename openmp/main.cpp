@@ -1,11 +1,13 @@
 #include "definitions.h"
-#include "random.h"
 #include "parameters.h"
+#include "random.h"
+#include "timer.h"
 
 #include <fstream>
 #include <iostream>
 #include <omp.h>
 #include <string>
+#include <thread>
 
 Coordinate distance(const Point &point, const Centroid &centroid) {
     const auto x = point.x - centroid.x;
@@ -99,18 +101,30 @@ int main(int argc, const char **argv) {
                                      RandomHelper::random<Coordinate>(params.minY, params.maxY)});
     }
 
+    std::cout << "Execution environment\n:";
+    std::cout << "\tstd::thread::hardware_concurrency = " << std::thread::hardware_concurrency() << '\n';
+    std::cout << "\tomp_get_num_procs = " << omp_get_num_procs() << '\n';
+    std::cout << "\tomp_get_max_threads = " << omp_get_max_threads() << '\n';
+    std::cout << std::endl;
+
+    std::cout << "Running clasterization:\n";
     bool converged = false;
-    for (size_t iteration = 0; iteration < params.maxIterations; iteration++) {
-        converged = !update(points, centroids, params.numberOfPoints, params.numberOfClusters);
-        if (converged) {
-            std::cout << "Achieved convergence in iteration " << iteration << ".\n";
-            break;
-        }
-
+    Timer timer{};
+    size_t iteration = 0;
+    for (; iteration < params.maxIterations && !converged; iteration++) {
         dumpCsv(iteration, points);
-    }
 
-    if (!converged) {
-        std::cout << "Did not achieve convergence after " << params.maxIterations << " iterations.\n";
+        timer.start();
+        converged = !update(points, centroids, params.numberOfPoints, params.numberOfClusters);
+        timer.end();
+
+        std::cout << "\tIteration " << iteration << ": " << timer.getUs().count() << "us" << std::endl;
+    }
+    std::cout << std::endl;
+
+    if (converged) {
+        std::cout << "Achieved convergence after " << iteration << " iterations.\n";
+    } else {
+        std::cout << "Did not achieve convergence after " << iteration << " iterations.\n";
     }
 }

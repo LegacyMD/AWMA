@@ -11,6 +11,10 @@ static void parseParameter(const std::string &commandLineToken, T &parameter, co
         return;
     }
 
+    if (commandLineToken.substr(0, valueStart) != key) {
+        return;
+    }
+
     std::istringstream value{commandLineToken.substr(valueStart + 1)};
     value >> parameter;
 }
@@ -37,4 +41,5 @@ void Parameters::display() {
               << "\tnumberOfPoints = " << numberOfPoints << '\n'
               << "\tnumberOfClusters = " << numberOfClusters << '\n'
               << "\tmaxIterations = " << maxIterations << '\n';
+    std::cout << std::endl;
 }
