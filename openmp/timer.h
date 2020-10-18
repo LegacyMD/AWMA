@@ -11,6 +11,7 @@ public:
 
     template <typename T>
     auto get() { return std::chrono::duration_cast<T>(endTime - startTime); }
+    auto getS() { return get<std::chrono::seconds>(); }
     auto getMs() { return get<std::chrono::milliseconds>(); }
     auto getUs() { return get<std::chrono::microseconds>(); }
 

@@ -5,18 +5,19 @@
 #include <string>
 
 template <typename T>
-static void parseParameter(const std::string &commandLineToken, T &parameter, const std::string &key) {
+static bool parseParameter(const std::string &commandLineToken, T &parameter, const std::string &key) {
     const auto valueStart = commandLineToken.find('=');
     if (valueStart == std::string::npos) {
-        return;
+        return false;
     }
 
     if (commandLineToken.substr(0, valueStart) != key) {
-        return;
+        return false;
     }
 
     std::istringstream value{commandLineToken.substr(valueStart + 1)};
     value >> parameter;
+    return true;
 }
 
 void Parameters::parseCommandLine(int argc, const char **argv) {
@@ -29,6 +30,9 @@ void Parameters::parseCommandLine(int argc, const char **argv) {
         parseParameter(commandLineToken, numberOfPoints, "numberOfPoints");
         parseParameter(commandLineToken, numberOfClusters, "numberOfClusters");
         parseParameter(commandLineToken, maxIterations, "maxIterations");
+        parseParameter(commandLineToken, writeCsv, "writeCsv");
+        parseParameter(commandLineToken, algorithm, "algorithm");
+        hasRandomSeed |= parseParameter(commandLineToken, randomSeed, "randomSeed");
     }
 }
 
@@ -40,6 +44,8 @@ void Parameters::display() {
               << "\tmaxY = " << maxY << '\n'
               << "\tnumberOfPoints = " << numberOfPoints << '\n'
               << "\tnumberOfClusters = " << numberOfClusters << '\n'
-              << "\tmaxIterations = " << maxIterations << '\n';
+              << "\tmaxIterations = " << maxIterations << '\n'
+              << "\talgorithm = " << algorithm << '\n'
+              << "\trandomSeed = " << (hasRandomSeed ? std::to_string(randomSeed) : "none (seed itself is randomized)") << '\n';
     std::cout << std::endl;
 }
