@@ -12,13 +12,21 @@
 #include <string>
 #include <thread>
 
-void dumpCsv(size_t iteration, const std::vector<Point> &points) {
+void dumpCsv(size_t iteration, const std::vector<Point> &points, const std::vector<Centroid> &centroids) {
     const std::string fileName = std::string{CSV_PATH} + "points_" + std::to_string(iteration) + ".csv";
     std::ofstream file{fileName};
     for (const Point &point : points) {
         file << point.clusterLabel << ','
              << point.x << ','
              << point.y << '\n';
+    }
+
+    const std::string fileNameCentroids = std::string{CSV_PATH} + "centroids_" + std::to_string(iteration) + ".csv";
+    std::ofstream fileCentroids{fileNameCentroids};
+    for (const Centroid &centroid : centroids) {
+        fileCentroids << centroid.clusterLabel << ','
+                      << centroid.x << ','
+                      << centroid.y << '\n';
     }
 }
 
@@ -127,7 +135,7 @@ int main(int argc, const char **argv) {
     for (; iteration < params.maxIterations && !converged; iteration++) {
         timer.start();
         if (params.writeCsv) {
-            dumpCsv(iteration, points);
+            dumpCsv(iteration, points, centroids);
         }
         timer.end();
         totalCsvTimeUs += timer.getUs().count();

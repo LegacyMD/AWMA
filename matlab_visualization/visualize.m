@@ -7,16 +7,26 @@ while 1
     if ~isfile(fileName)
        break
     end
-
     table = table2array(readtable(fileName));
     sortrows(table, 1)
-    x = table(:, 2);
-    y = table(:, 3);
-    cluster = table(:, 1);
-    
+    pointsLabel = table(:, 1);
+    pointsX = table(:, 2);
+    pointsY = table(:, 3);
+   
+    fileName = strcat('centroids_', num2str(iteration), '.csv');
+    if ~isfile(fileName)
+       break
+    end
+    table = table2array(readtable(fileName));
+    sortrows(table, 1)
+    centroidsLabel = table(:, 1);
+    centroidsX = table(:, 2);
+    centroidsY = table(:, 3);
+   
     title(strcat('Iteration ', num2str(iteration)));
     hold on
-    gscatter(x,y,cluster)
+    gscatter(pointsX,pointsY,pointsLabel)
+    gscatter(centroidsX, centroidsY, centroidsLabel, "", "x", 10)
     hold off
     
     input("Press enter to view next iteration")

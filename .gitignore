@@ -2,4 +2,5 @@
 .vs/
 build/
 matlab_visualization/*.csv
+matlab_visualization/*.asv
 data/generated.txt
