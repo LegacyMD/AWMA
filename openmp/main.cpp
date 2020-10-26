@@ -1,19 +1,16 @@
 #include "definitions.h"
-#include "parameters.h"
-#include "random.h"
-#include "timer.h"
+
+#include "implementation/implementation.h"
+#include "utils/parameters.h"
+#include "utils/random.h"
+#include "utils/timer.h"
 
 #include <fstream>
 #include <iostream>
 #include <omp.h>
+#include <sstream>
 #include <string>
 #include <thread>
-
-Coordinate distance(const Point &point, const Centroid &centroid) {
-    const auto x = point.x - centroid.x;
-    const auto y = point.y - centroid.y;
-    return x * x + y * y; // no sqrt, because it's only for comparisons
-}
 
 void dumpCsv(size_t iteration, const std::vector<Point> &points) {
     const std::string fileName = std::string{CSV_PATH} + "points_" + std::to_string(iteration) + ".csv";
@@ -25,128 +22,66 @@ void dumpCsv(size_t iteration, const std::vector<Point> &points) {
     }
 }
 
-void init(std::vector<Point> &points, std::vector<Centroid> &centroids, const Parameters &params) {
-    points.reserve(params.numberOfPoints);
-    for (size_t pointIndex = 0; pointIndex < params.numberOfPoints; pointIndex++) {
-        points.push_back(Point{invalidLabel,
-                               RandomHelper::random<Coordinate>(params.minX, params.maxX),
-                               RandomHelper::random<Coordinate>(params.minY, params.maxY)});
+bool init(std::vector<Point> &points, std::vector<Centroid> &centroids, const Parameters &params) {
+    // Open file
+    std::ifstream file(std::string(DATA_DIRECTORY) + params.inputFileName);
+    if (!file) {
+        std::cerr << "Error analyzing file: could not open\n";
+        return false;
     }
 
-    points.reserve(params.numberOfClusters);
-    for (Label clusterIndex = 0; clusterIndex < params.numberOfClusters; clusterIndex++) {
+    // Load centroids count
+    size_t centroidsCount;
+    file >> centroidsCount;
+    if (!file) {
+        std::cerr << "Error analyzing file: could not load centroids count\n";
+        return false;
+    }
+    file.ignore(1, '\n');
+
+    // Load all points
+    Coordinate minX{}, maxX{}, minY{}, maxY{};
+    while (true) {
+        // Load line
+        std::string line{};
+        std::getline(file, line);
+        if (!file) {
+            if (file.eof()) {
+                break;
+            }
+
+            std::cerr << "Error analyzing file: could not load line\n";
+            return false;
+        }
+
+        // Parse line
+        std::istringstream lineStream{line};
+        Coordinate x{}, y{};
+        lineStream >> x >> y;
+        if (!lineStream) {
+            std::cerr << "Error analyzing file: could not parse line\n";
+            return false;
+        }
+
+        // Add point
+        points.push_back(Point{invalidLabel, x, y});
+
+        // Update maxes and mins
+        minX = std::min(minX, x);
+        maxX = std::max(maxX, x);
+        minY = std::min(minY, y);
+        maxY = std::max(maxY, y);
+    }
+
+    // Randomly generate centroids
+    centroids.reserve(centroidsCount);
+    for (Label clusterIndex = 0; clusterIndex < centroidsCount; clusterIndex++) {
         centroids.push_back(Centroid{clusterIndex,
-                                     RandomHelper::random<Coordinate>(params.minX, params.maxX),
-                                     RandomHelper::random<Coordinate>(params.minY, params.maxY)});
-    }
-}
-
-using Algorithm = bool (*)(std::vector<Point> &points, std::vector<Centroid> &centroids, size_t numberOfPoints, size_t numberOfClusters);
-
-bool update1(std::vector<Point> &points, std::vector<Centroid> &centroids, size_t numberOfPoints, size_t numberOfClusters) {
-    struct NewCentroidPositionData {
-        Coordinate x = 0;
-        Coordinate y = 0;
-        int divisor = 0;
-    };
-    std::vector<NewCentroidPositionData> newCentroidPositions(centroids.size());
-
-#pragma omp parallel for default(none) shared(points) shared(centroids) firstprivate(numberOfPoints), firstprivate(numberOfClusters) shared(newCentroidPositions)
-    for (int pointIndex = 0; pointIndex < numberOfPoints; pointIndex++) {
-        const Point &point = points[pointIndex];
-
-        Coordinate nearestCentroidDistance = std::numeric_limits<Coordinate>::max();
-        size_t nearestCentroidIndex = 0;
-        for (size_t centroidIndex = 0u; centroidIndex < numberOfClusters; centroidIndex++) {
-            const Centroid &centroid = centroids[centroidIndex];
-            const Coordinate centroidDistance = distance(point, centroid);
-            if (centroidDistance < nearestCentroidDistance) {
-                nearestCentroidDistance = centroidDistance;
-                nearestCentroidIndex = centroid.clusterLabel;
-            }
-        }
-
-        points[pointIndex].clusterLabel = centroids[nearestCentroidIndex].clusterLabel;
-#pragma omp atomic
-        newCentroidPositions[nearestCentroidIndex].x += point.x;
-#pragma omp atomic
-        newCentroidPositions[nearestCentroidIndex].y += point.y;
-#pragma omp atomic
-        newCentroidPositions[nearestCentroidIndex].divisor++;
+                                     RandomHelper::random<Coordinate>(minX, maxX),
+                                     RandomHelper::random<Coordinate>(minY, maxY)});
     }
 
-    bool changed = false;
-    // clang-format off
-#pragma omp parallel for default(none) shared(centroids) shared(newCentroidPositions) reduction(|| : changed)
-    // clang-format on
-    for (int centroidIndex = 0u; centroidIndex < numberOfClusters; centroidIndex++) {
-        NewCentroidPositionData &newPositionData = newCentroidPositions[centroidIndex];
-        if (newPositionData.divisor != 0) {
-            Centroid &centroid = centroids[centroidIndex];
-            newPositionData.x /= newPositionData.divisor;
-            newPositionData.y /= newPositionData.divisor;
-            if ((newPositionData.x != centroid.x) || (newPositionData.y != centroid.y)) {
-                centroid.x = newPositionData.x;
-                centroid.y = newPositionData.y;
-                changed = true;
-            }
-        }
-    }
-
-    return changed;
-}
-
-bool update2(std::vector<Point> &points, std::vector<Centroid> &centroids, size_t numberOfPoints, size_t numberOfClusters) {
-#pragma omp parallel for default(none) shared(points) shared(centroids) firstprivate(numberOfPoints), firstprivate(numberOfClusters)
-    for (int pointIndex = 0; pointIndex < numberOfPoints; pointIndex++) {
-        const Point &point = points[pointIndex];
-
-        Coordinate nearestCentroidDistance = std::numeric_limits<Coordinate>::max();
-        size_t nearestCentroidIndex = 0;
-        for (size_t centroidIndex = 0u; centroidIndex < numberOfClusters; centroidIndex++) {
-            const Centroid &centroid = centroids[centroidIndex];
-            const Coordinate centroidDistance = distance(point, centroid);
-            if (centroidDistance < nearestCentroidDistance) {
-                nearestCentroidDistance = centroidDistance;
-                nearestCentroidIndex = centroid.clusterLabel;
-            }
-        }
-
-        points[pointIndex].clusterLabel = centroids[nearestCentroidIndex].clusterLabel;
-    }
-
-    bool changed = false;
-    for (int centroidIndex = 0u; centroidIndex < numberOfClusters; centroidIndex++) {
-        Centroid &centroid = centroids[centroidIndex];
-        Coordinate x = 0;
-        Coordinate y = 0;
-        int divisor = 0;
-
-        // clang-format off
-#pragma omp parallel for default(none) shared(centroid) shared(points) reduction(+ : x) reduction(+ : y) reduction(+ : divisor)
-        // clang-format on
-        for (int pointIndex = 0; pointIndex < numberOfPoints; pointIndex++) {
-            const Point &point = points[pointIndex];
-            if (point.clusterLabel == centroid.clusterLabel) {
-                x += point.x;
-                y += point.y;
-                divisor++;
-            }
-        }
-
-        if (divisor != 0) {
-            x /= divisor;
-            y /= divisor;
-
-            if ((x != centroid.x) || (y != centroid.y)) {
-                centroid.x = x;
-                centroid.y = y;
-                changed = true;
-            }
-        }
-    }
-
-    return changed;
+    return true;
 }
 
 int main(int argc, const char **argv) {
@@ -156,20 +91,25 @@ int main(int argc, const char **argv) {
     if (params.hasRandomSeed) {
         RandomHelper::init(params.randomSeed);
     }
-    Algorithm updateAlgorithm = {};
-    switch (params.algorithm) {
-    case 1:
-        updateAlgorithm = update1;
-        break;
-    case 2:
-        updateAlgorithm = update2;
-        break;
-    default:
-        std::cout << "ERROR Unknown algorithm selected\n";
-        return 1;
-    }
+    Implementation update = getImplementation(params.implementationIndex);
     params.display();
     Timer timer{};
+
+    // Generate points and centroids
+    std::vector<Point> points = {};
+    std::vector<Centroid> centroids = {};
+    timer.start();
+    if (!init(points, centroids, params)) {
+        return 1;
+    }
+    timer.end();
+    const auto totalInitTimeUs = timer.getUs().count();
+
+    // Display what has been loaded
+    std::cout << "Loaded data:\n"
+              << '\t' << points.size() << " points\n"
+              << '\t' << centroids.size() << " clusters\n"
+              << std::endl;
 
     // Print general system info
     std::cout << "Execution environment:\n";
@@ -177,14 +117,6 @@ int main(int argc, const char **argv) {
     std::cout << "\tomp_get_num_procs = " << omp_get_num_procs() << '\n';
     std::cout << "\tomp_get_max_threads = " << omp_get_max_threads() << '\n';
     std::cout << std::endl;
-
-    // Generate points and centroids
-    std::vector<Point> points = {};
-    std::vector<Centroid> centroids = {};
-    timer.start();
-    init(points, centroids, params);
-    timer.end();
-    const auto totalInitTimeUs = timer.getUs().count();
 
     // Run clustering
     std::cout << "Running clustering:\n";
@@ -201,7 +133,7 @@ int main(int argc, const char **argv) {
         totalCsvTimeUs += timer.getUs().count();
 
         timer.start();
-        converged = !updateAlgorithm(points, centroids, params.numberOfPoints, params.numberOfClusters);
+        converged = !update(points, centroids, points.size(), centroids.size());
         timer.end();
         totalClusteringTimeUs += timer.getUs().count();
 

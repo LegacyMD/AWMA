@@ -1,6 +1,6 @@
-#include "parameters.h"
-
+#include <fstream>
 #include <iostream>
+#include <random>
 #include <sstream>
 #include <string>
 
@@ -20,7 +20,23 @@ static bool parseParameter(const std::string &commandLineToken, T &parameter, co
     return true;
 }
 
-void Parameters::parseCommandLine(int argc, const char **argv) {
+template <typename T>
+auto random(std::mt19937 &gen, T min, T max) {
+    return std::uniform_int_distribution<T>{min, max}(gen);
+}
+
+int main(int argc, char **argv) {
+    // Parameters
+    size_t minX = 0;
+    size_t maxX = 50;
+    size_t minY = 0;
+    size_t maxY = 50;
+    size_t numberOfPoints = 10000;
+    size_t numberOfClusters = 20;
+    unsigned int randomSeed = 0;
+    bool hasRandomSeed = false;
+
+    // Parse parameters
     for (int argIndex = 0; argIndex < argc; argIndex++) {
         const std::string commandLineToken = argv[argIndex];
         parseParameter(commandLineToken, minX, "minX");
@@ -29,14 +45,10 @@ void Parameters::parseCommandLine(int argc, const char **argv) {
         parseParameter(commandLineToken, maxY, "maxY");
         parseParameter(commandLineToken, numberOfPoints, "numberOfPoints");
         parseParameter(commandLineToken, numberOfClusters, "numberOfClusters");
-        parseParameter(commandLineToken, maxIterations, "maxIterations");
-        parseParameter(commandLineToken, writeCsv, "writeCsv");
-        parseParameter(commandLineToken, algorithm, "algorithm");
         hasRandomSeed |= parseParameter(commandLineToken, randomSeed, "randomSeed");
     }
-}
 
-void Parameters::display() {
+    // Display parameters
     std::cout << "Parameters:\n"
               << "\tminX = " << minX << '\n'
               << "\tmaxX = " << maxX << '\n'
@@ -44,8 +56,23 @@ void Parameters::display() {
               << "\tmaxY = " << maxY << '\n'
               << "\tnumberOfPoints = " << numberOfPoints << '\n'
               << "\tnumberOfClusters = " << numberOfClusters << '\n'
-              << "\tmaxIterations = " << maxIterations << '\n'
-              << "\talgorithm = " << algorithm << '\n'
-              << "\trandomSeed = " << (hasRandomSeed ? std::to_string(randomSeed) : "none (seed itself is randomized)") << '\n';
-    std::cout << std::endl;
+              << "\trandomSeed = " << (hasRandomSeed ? std::to_string(randomSeed) : "none (seed itself is randomized)") << '\n'
+              << std::endl;
+
+    // Open file
+    std::ofstream file{std::string{DATA_DIRECTORY} + "generated.txt"};
+    if (!file) {
+        std::cerr << "Error creating file" << std::endl;
+        return 1;
+    }
+
+    // Write cluster count
+    file << numberOfClusters << '\n';
+
+    // Write points
+    std::mt19937 gen{};
+    for (size_t pointIndex = 0; pointIndex < numberOfPoints; pointIndex++) {
+        file << random<size_t>(gen, minX, maxX) << " "
+             << random<size_t>(gen, minY, maxY) << '\n';
+    }
 }
