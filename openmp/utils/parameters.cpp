@@ -26,6 +26,7 @@ void Parameters::parseCommandLine(int argc, const char **argv) {
         const std::string commandLineToken = argv[argIndex];
         parseParameter(commandLineToken, maxIterations, "maxIterations");
         parseParameter(commandLineToken, writeCsv, "writeCsv");
+        parseParameter(commandLineToken, verbose, "verbose");
         parseParameter(commandLineToken, implementationIndex, "implementation");
         parseParameter(commandLineToken, inputFileName, "inputFileName");
         hasRandomSeed |= parseParameter(commandLineToken, randomSeed, "randomSeed");

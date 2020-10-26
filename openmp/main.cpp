@@ -100,7 +100,9 @@ int main(int argc, const char **argv) {
         RandomHelper::init(params.randomSeed);
     }
     Implementation update = getImplementation(params.implementationIndex);
-    params.display();
+    if (params.verbose) {
+        params.display();
+    }
     Timer timer{};
 
     // Generate points and centroids
@@ -114,20 +116,26 @@ int main(int argc, const char **argv) {
     const auto totalInitTimeUs = timer.getUs().count();
 
     // Display what has been loaded
-    std::cout << "Loaded data:\n"
-              << '\t' << points.size() << " points\n"
-              << '\t' << centroids.size() << " clusters\n"
-              << std::endl;
+    if (params.verbose) {
+        std::cout << "Loaded data:\n"
+                  << '\t' << points.size() << " points\n"
+                  << '\t' << centroids.size() << " clusters\n"
+                  << std::endl;
+    }
 
     // Print general system info
-    std::cout << "Execution environment:\n";
-    std::cout << "\tstd::thread::hardware_concurrency = " << std::thread::hardware_concurrency() << '\n';
-    std::cout << "\tomp_get_num_procs = " << omp_get_num_procs() << '\n';
-    std::cout << "\tomp_get_max_threads = " << omp_get_max_threads() << '\n';
-    std::cout << std::endl;
+    if (params.verbose) {
+        std::cout << "Execution environment:\n";
+        std::cout << "\tstd::thread::hardware_concurrency = " << std::thread::hardware_concurrency() << '\n';
+        std::cout << "\tomp_get_num_procs = " << omp_get_num_procs() << '\n';
+        std::cout << "\tomp_get_max_threads = " << omp_get_max_threads() << '\n';
+        std::cout << std::endl;
+    }
 
     // Run clustering
-    std::cout << "Running clustering:\n";
+    if (params.verbose) {
+        std::cout << "Running clustering:\n";
+    }
     bool converged = false;
     size_t iteration = 0;
     unsigned long long totalCsvTimeUs = 0;
@@ -145,19 +153,34 @@ int main(int argc, const char **argv) {
         timer.end();
         totalClusteringTimeUs += timer.getUs().count();
 
-        std::cout << "\tIteration " << iteration << ": " << timer.getUs().count() << "us" << std::endl;
+        if (params.verbose) {
+            std::cout << "\tIteration " << iteration << ": " << timer.getUs().count() << "us" << std::endl;
+        }
+    }
+    if (params.verbose) {
+        std::cout << std::endl;
     }
 
     // Print total timings
-    std::cout << "Summary:\n";
-    std::cout << "\tInit time: " << totalInitTimeUs << "us = " << totalInitTimeUs / 1000 << "ms\n";
-    std::cout << "\tClustering time: " << totalClusteringTimeUs << "us = " << totalClusteringTimeUs / 1000 << "ms\n";
-    std::cout << "\tCsv writing time: " << totalCsvTimeUs << "us = " << totalCsvTimeUs / 1000 << "ms\n\n";
+    if (params.verbose) {
+        std::cout << "Summary:\n";
+        std::cout << "\tInit time: " << totalInitTimeUs << "us = " << totalInitTimeUs / 1000 << "ms\n";
+        std::cout << "\tClustering time: " << totalClusteringTimeUs << "us = " << totalClusteringTimeUs / 1000 << "ms\n";
+        std::cout << "\tCsv writing time: " << totalCsvTimeUs << "us = " << totalCsvTimeUs / 1000 << "ms\n\n";
+    } else {
+        std::cout << totalClusteringTimeUs << '\n';
+    }
 
     // Print info about convergence
     if (converged) {
-        std::cout << "Achieved convergence after " << iteration << " iterations.\n";
+        if (params.verbose) {
+            std::cout << "Achieved convergence after " << iteration << " iterations.\n";
+        }
+        return 0;
     } else {
-        std::cout << "Did not achieve convergence after " << iteration << " iterations.\n";
+        if (params.verbose) {
+            std::cout << "Did not achieve convergence after " << iteration << " iterations.\n";
+        }
+        return 1;
     }
 }
