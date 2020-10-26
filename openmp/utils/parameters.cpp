@@ -36,6 +36,8 @@ void Parameters::parseCommandLine(int argc, const char **argv) {
 void Parameters::display() {
     std::cout << "Parameters:\n"
               << "\tmaxIterations = " << maxIterations << '\n'
+              << "\writeCsv = " << writeCsv << '\n'
+              << "\verbose = " << verbose << '\n'
               << "\timplementation = " << implementationIndex << " (" << getImplementationString(implementationIndex) << ")\n"
               << "\tinputFileName = " << inputFileName << '\n'
               << "\trandomSeed = " << (hasRandomSeed ? std::to_string(randomSeed) : "none (seed itself is randomized)") << '\n'
