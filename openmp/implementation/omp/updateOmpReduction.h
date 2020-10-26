@@ -29,7 +29,7 @@ inline bool updateOmpReduction(std::vector<Point> &points, std::vector<Centroid>
         int divisor = 0;
 
         // clang-format off
-#pragma omp parallel for default(none) shared(centroid) shared(points) reduction(+ : x) reduction(+ : y) reduction(+ : divisor)
+#pragma omp parallel for default(none) shared(centroid) shared(numberOfPoints) shared(points) reduction(+ : x) reduction(+ : y) reduction(+ : divisor)
         // clang-format on
         for (int pointIndex = 0; pointIndex < numberOfPoints; pointIndex++) {
             const Point &point = points[pointIndex];

@@ -36,7 +36,7 @@ inline bool updateOmpAtomics(std::vector<Point> &points, std::vector<Centroid> &
 
     bool changed = false;
     // clang-format off
-#pragma omp parallel for default(none) shared(centroids) shared(newCentroidPositions) reduction(|| : changed)
+#pragma omp parallel for default(none) shared(centroids) shared(newCentroidPositions) shared(numberOfClusters) reduction(|| : changed)
     // clang-format on
     for (int centroidIndex = 0u; centroidIndex < numberOfClusters; centroidIndex++) {
         NewCentroidPositionData &newPositionData = newCentroidPositions[centroidIndex];
