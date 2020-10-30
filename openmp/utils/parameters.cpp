@@ -37,7 +37,7 @@ void Parameters::display() {
     std::cout << "Parameters:\n"
               << "\tmaxIterations = " << maxIterations << '\n'
               << "\twriteCsv = " << writeCsv << '\n'
-              << "\verbose = " << verbose << '\n'
+              << "\tverbose = " << verbose << '\n'
               << "\timplementation = " << implementationIndex << " (" << getImplementationString(implementationIndex) << ")\n"
               << "\tinputFileName = " << inputFileName << '\n'
               << "\trandomSeed = " << (hasRandomSeed ? std::to_string(randomSeed) : "none (seed itself is randomized)") << '\n'
