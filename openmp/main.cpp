@@ -12,13 +12,15 @@
 #include <string>
 #include <thread>
 
-void dumpCsv(size_t iteration, const std::vector<Point> &points, const std::vector<Centroid> &centroids) {
+void dumpCsv(size_t iteration, PointBundleVector &points, const std::vector<Centroid> &centroids) {
     const std::string fileName = std::string{CSV_PATH} + "points_" + std::to_string(iteration) + ".csv";
     std::ofstream file{fileName};
-    for (const Point &point : points) {
-        file << point.clusterLabel << ','
-             << point.x << ','
-             << point.y << '\n';
+    for (const PointBundle &pointBundle : points) {
+        for (const Point &point : pointBundle.points) {
+            file << point.clusterLabel << ','
+                 << point.x << ','
+                 << point.y << '\n';
+        }
     }
 
     const std::string fileNameCentroids = std::string{CSV_PATH} + "centroids_" + std::to_string(iteration) + ".csv";
@@ -30,7 +32,7 @@ void dumpCsv(size_t iteration, const std::vector<Point> &points, const std::vect
     }
 }
 
-bool init(std::vector<Point> &points, std::vector<Centroid> &centroids, const Parameters &params) {
+bool init(PointBundleVector &points, std::vector<Centroid> &centroids, const Parameters &params) {
     // Open file
     std::ifstream file(std::string(DATA_DIRECTORY) + params.inputFileName);
     if (!file) {
@@ -49,6 +51,9 @@ bool init(std::vector<Point> &points, std::vector<Centroid> &centroids, const Pa
 
     // Load all points
     Coordinate minX{}, maxX{}, minY{}, maxY{};
+    PointBundle bundle{};
+    int indexInCurrentBundle = 0;
+    int pointsCount = 0;
     while (true) {
         // Load line
         std::string line{};
@@ -72,7 +77,12 @@ bool init(std::vector<Point> &points, std::vector<Centroid> &centroids, const Pa
         }
 
         // Add point
-        points.push_back(Point{invalidLabel, x, y});
+        if (indexInCurrentBundle >= PointBundle::pointsCount) {
+            points.push_back(bundle);
+            indexInCurrentBundle = 0;
+        }
+        bundle.points[indexInCurrentBundle++] = Point{invalidLabel, x, y};
+        pointsCount++;
 
         // Update maxes and mins
         minX = std::min(minX, x);
@@ -80,6 +90,12 @@ bool init(std::vector<Point> &points, std::vector<Centroid> &centroids, const Pa
         minY = std::min(minY, y);
         maxY = std::max(maxY, y);
     }
+
+    // Finalize points
+    if (indexInCurrentBundle != 0) {
+        points.push_back(bundle);
+    }
+    points.setPointsCount(pointsCount);
 
     // Randomly generate centroids
     centroids.reserve(centroidsCount);
@@ -106,7 +122,7 @@ int main(int argc, const char **argv) {
     Timer timer{};
 
     // Generate points and centroids
-    std::vector<Point> points = {};
+    PointBundleVector points = {};
     std::vector<Centroid> centroids = {};
     timer.start();
     if (!init(points, centroids, params)) {

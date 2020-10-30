@@ -2,23 +2,26 @@
 
 #include "implementation/implementation.h"
 
-inline bool updateOmpReduction(std::vector<Point> &points, std::vector<Centroid> &centroids, size_t numberOfPoints, size_t numberOfClusters) {
-#pragma omp parallel for default(none) shared(points) shared(centroids) firstprivate(numberOfPoints), firstprivate(numberOfClusters)
-    for (int pointIndex = 0; pointIndex < numberOfPoints; pointIndex++) {
-        const Point &point = points[pointIndex];
+inline bool updateOmpReduction(PointBundleVector &pointBundles, std::vector<Centroid> &centroids, size_t numberOfBundles, size_t numberOfClusters) {
+#pragma omp parallel for default(none) shared(pointBundles) shared(centroids) firstprivate(numberOfBundles), firstprivate(numberOfClusters)
+    for (int bundleIndex = 0; bundleIndex < numberOfBundles; bundleIndex++) {
+        PointBundle &bundle = pointBundles[bundleIndex];
+        for (size_t pointIndex = 0; pointIndex < pointBundles.getPointsCountInCurrentBundle(bundleIndex); pointIndex++) {
+            Point &point = bundle.points[pointIndex];
 
-        Coordinate nearestCentroidDistance = std::numeric_limits<Coordinate>::max();
-        size_t nearestCentroidIndex = 0;
-        for (size_t centroidIndex = 0u; centroidIndex < numberOfClusters; centroidIndex++) {
-            const Centroid &centroid = centroids[centroidIndex];
-            const Coordinate centroidDistance = distance(point, centroid);
-            if (centroidDistance < nearestCentroidDistance) {
-                nearestCentroidDistance = centroidDistance;
-                nearestCentroidIndex = centroid.clusterLabel;
+            Coordinate nearestCentroidDistance = std::numeric_limits<Coordinate>::max();
+            size_t nearestCentroidIndex = 0;
+            for (size_t centroidIndex = 0u; centroidIndex < numberOfClusters; centroidIndex++) {
+                const Centroid &centroid = centroids[centroidIndex];
+                const Coordinate centroidDistance = distance(point, centroid);
+                if (centroidDistance < nearestCentroidDistance) {
+                    nearestCentroidDistance = centroidDistance;
+                    nearestCentroidIndex = centroid.clusterLabel;
+                }
             }
-        }
 
-        points[pointIndex].clusterLabel = centroids[nearestCentroidIndex].clusterLabel;
+            point.clusterLabel = centroids[nearestCentroidIndex].clusterLabel;
+        }
     }
 
     bool changed = false;
@@ -29,14 +32,17 @@ inline bool updateOmpReduction(std::vector<Point> &points, std::vector<Centroid>
         int divisor = 0;
 
         // clang-format off
-#pragma omp parallel for default(none) shared(centroid) shared(numberOfPoints) shared(points) reduction(+ : x) reduction(+ : y) reduction(+ : divisor)
+#pragma omp parallel for default(none) shared(centroid) shared(numberOfBundles) shared(pointBundles) reduction(+ : x) reduction(+ : y) reduction(+ : divisor)
         // clang-format on
-        for (int pointIndex = 0; pointIndex < numberOfPoints; pointIndex++) {
-            const Point &point = points[pointIndex];
-            if (point.clusterLabel == centroid.clusterLabel) {
-                x += point.x;
-                y += point.y;
-                divisor++;
+        for (int bundleIndex = 0; bundleIndex < numberOfBundles; bundleIndex++) {
+            PointBundle &bundle = pointBundles[bundleIndex];
+            for (size_t pointIndex = 0; pointIndex < pointBundles.getPointsCountInCurrentBundle(bundleIndex); pointIndex++) {
+                const Point &point = bundle.points[pointIndex];
+                if (point.clusterLabel == centroid.clusterLabel) {
+                    x += point.x;
+                    y += point.y;
+                    divisor++;
+                }
             }
         }
 
