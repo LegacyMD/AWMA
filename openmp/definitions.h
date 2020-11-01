@@ -8,7 +8,6 @@ using Label = uint32_t;
 constexpr static Label invalidLabel = std::numeric_limits<Label>::max();
 
 struct Point {
-    Label clusterLabel;
     const Coordinate x;
     const Coordinate y;
 };

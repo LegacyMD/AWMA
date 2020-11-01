@@ -12,13 +12,13 @@
 #include <string>
 #include <thread>
 
-void dumpCsv(size_t iteration, const std::vector<Point> &points, const std::vector<Centroid> &centroids) {
+void dumpCsv(size_t iteration, const std::vector<Point> &points, const std::vector<Label> pointLabels, const std::vector<Centroid> &centroids) {
     const std::string fileName = std::string{CSV_PATH} + "points_" + std::to_string(iteration) + ".csv";
     std::ofstream file{fileName};
-    for (const Point &point : points) {
-        file << point.clusterLabel << ','
-             << point.x << ','
-             << point.y << '\n';
+    for (auto i = 0u; i < points.size(); i++) {
+        file << pointLabels[i] << ','
+             << points[i].x << ','
+             << points[i].y << '\n';
     }
 
     const std::string fileNameCentroids = std::string{CSV_PATH} + "centroids_" + std::to_string(iteration) + ".csv";
@@ -30,7 +30,7 @@ void dumpCsv(size_t iteration, const std::vector<Point> &points, const std::vect
     }
 }
 
-bool init(std::vector<Point> &points, std::vector<Centroid> &centroids, const Parameters &params) {
+bool init(std::vector<Point> &points, std::vector<Label> &pointLabels, std::vector<Centroid> &centroids, const Parameters &params) {
     // Open file
     std::ifstream file(std::string(DATA_DIRECTORY) + params.inputFileName);
     if (!file) {
@@ -72,7 +72,8 @@ bool init(std::vector<Point> &points, std::vector<Centroid> &centroids, const Pa
         }
 
         // Add point
-        points.push_back(Point{invalidLabel, x, y});
+        points.push_back(Point{x, y});
+        pointLabels.push_back(invalidLabel);
 
         // Update maxes and mins
         minX = std::min(minX, x);
@@ -107,9 +108,10 @@ int main(int argc, const char **argv) {
 
     // Generate points and centroids
     std::vector<Point> points = {};
+    std::vector<Label> pointLabels = {};
     std::vector<Centroid> centroids = {};
     timer.start();
-    if (!init(points, centroids, params)) {
+    if (!init(points, pointLabels, centroids, params)) {
         return 1;
     }
     timer.end();
@@ -143,13 +145,13 @@ int main(int argc, const char **argv) {
     for (; iteration < params.maxIterations && !converged; iteration++) {
         timer.start();
         if (params.writeCsv) {
-            dumpCsv(iteration, points, centroids);
+            dumpCsv(iteration, points, pointLabels, centroids);
         }
         timer.end();
         totalCsvTimeUs += timer.getUs().count();
 
         timer.start();
-        converged = !update(points, centroids, points.size(), centroids.size());
+        converged = !update(points, pointLabels, centroids, points.size(), centroids.size());
         timer.end();
         totalClusteringTimeUs += timer.getUs().count();
 

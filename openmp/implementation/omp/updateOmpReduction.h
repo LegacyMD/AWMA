@@ -2,8 +2,8 @@
 
 #include "implementation/implementation.h"
 
-inline bool updateOmpReduction(std::vector<Point> &points, std::vector<Centroid> &centroids, size_t numberOfPoints, size_t numberOfClusters) {
-#pragma omp parallel for default(none) shared(points) shared(centroids) firstprivate(numberOfPoints), firstprivate(numberOfClusters)
+inline bool updateOmpReduction(const std::vector<Point> &points, std::vector<Label> &pointLabels, std::vector<Centroid> &centroids, size_t numberOfPoints, size_t numberOfClusters) {
+#pragma omp parallel for default(none) shared(points) shared(pointLabels) shared(centroids) firstprivate(numberOfPoints), firstprivate(numberOfClusters)
     for (int pointIndex = 0; pointIndex < numberOfPoints; pointIndex++) {
         const Point &point = points[pointIndex];
 
@@ -18,7 +18,7 @@ inline bool updateOmpReduction(std::vector<Point> &points, std::vector<Centroid>
             }
         }
 
-        points[pointIndex].clusterLabel = centroids[nearestCentroidIndex].clusterLabel;
+        pointLabels[pointIndex] = centroids[nearestCentroidIndex].clusterLabel;
     }
 
     bool changed = false;
@@ -28,14 +28,14 @@ inline bool updateOmpReduction(std::vector<Point> &points, std::vector<Centroid>
         Coordinate y = 0;
         int divisor = 0;
 
+        const auto centroidClusterLabel = centroid.clusterLabel;
         // clang-format off
-#pragma omp parallel for default(none) shared(centroid) shared(numberOfPoints) shared(points) reduction(+ : x) reduction(+ : y) reduction(+ : divisor)
+#pragma omp parallel for default(none) shared(points) shared(pointLabels) firstprivate(centroidClusterLabel) firstprivate(numberOfPoints) reduction(+ : x) reduction(+ : y) reduction(+ : divisor)
         // clang-format on
         for (int pointIndex = 0; pointIndex < numberOfPoints; pointIndex++) {
-            const Point &point = points[pointIndex];
-            if (point.clusterLabel == centroid.clusterLabel) {
-                x += point.x;
-                y += point.y;
+            if (pointLabels[pointIndex] == centroidClusterLabel) {
+                x += points[pointIndex].x;
+                y += points[pointIndex].y;
                 divisor++;
             }
         }

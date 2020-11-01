@@ -2,7 +2,7 @@
 
 #include "implementation/implementation.h"
 
-inline bool updateOmpAtomics(std::vector<Point> &points, std::vector<Centroid> &centroids, size_t numberOfPoints, size_t numberOfClusters) {
+inline bool updateOmpAtomics(const std::vector<Point> &points, std::vector<Label> &pointLabels, std::vector<Centroid> &centroids, size_t numberOfPoints, size_t numberOfClusters) {
     struct NewCentroidPositionData {
         Coordinate x = 0;
         Coordinate y = 0;
@@ -10,7 +10,7 @@ inline bool updateOmpAtomics(std::vector<Point> &points, std::vector<Centroid> &
     };
     std::vector<NewCentroidPositionData> newCentroidPositions(centroids.size());
 
-#pragma omp parallel for default(none) shared(points) shared(centroids) firstprivate(numberOfPoints), firstprivate(numberOfClusters) shared(newCentroidPositions)
+#pragma omp parallel for default(none) shared(points) shared(pointLabels) shared(centroids) firstprivate(numberOfPoints), firstprivate(numberOfClusters) shared(newCentroidPositions)
     for (int pointIndex = 0; pointIndex < numberOfPoints; pointIndex++) {
         const Point &point = points[pointIndex];
 
@@ -25,7 +25,7 @@ inline bool updateOmpAtomics(std::vector<Point> &points, std::vector<Centroid> &
             }
         }
 
-        points[pointIndex].clusterLabel = centroids[nearestCentroidIndex].clusterLabel;
+        pointLabels[pointIndex] = centroids[nearestCentroidIndex].clusterLabel;
 #pragma omp atomic
         newCentroidPositions[nearestCentroidIndex].x += point.x;
 #pragma omp atomic
