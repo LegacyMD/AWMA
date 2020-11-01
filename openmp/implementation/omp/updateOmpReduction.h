@@ -3,22 +3,31 @@
 #include "implementation/implementation.h"
 
 inline bool updateOmpReduction(const std::vector<Point> &points, std::vector<Label> &pointLabels, std::vector<Centroid> &centroids, size_t numberOfPoints, size_t numberOfClusters) {
+    constexpr static size_t cachelineSize = 64u;
+    constexpr static size_t labelsPerCacheline = cachelineSize / sizeof(Label);
+    static_assert(cachelineSize % sizeof(Label) == 0, "Cacheline size is not divisible by sizeof(Label)");
+
+    const int cachelineCount = points.size() / labelsPerCacheline;
+
 #pragma omp parallel for default(none) shared(points) shared(pointLabels) shared(centroids) firstprivate(numberOfPoints), firstprivate(numberOfClusters)
-    for (int pointIndex = 0; pointIndex < numberOfPoints; pointIndex++) {
-        const Point &point = points[pointIndex];
+    for (int cachelineIndex = 0; cachelineIndex < cachelineCount; cachelineIndex++) {
+        int pointIndex = cachelineIndex * labelsPerCacheline;
 
-        Coordinate nearestCentroidDistance = std::numeric_limits<Coordinate>::max();
-        size_t nearestCentroidIndex = 0;
-        for (size_t centroidIndex = 0u; centroidIndex < numberOfClusters; centroidIndex++) {
-            const Centroid &centroid = centroids[centroidIndex];
-            const Coordinate centroidDistance = distance(point, centroid);
-            if (centroidDistance < nearestCentroidDistance) {
-                nearestCentroidDistance = centroidDistance;
-                nearestCentroidIndex = centroid.clusterLabel;
+        for (int pointInsideCachelineIndex = 0; pointInsideCachelineIndex < labelsPerCacheline; pointInsideCachelineIndex++) {
+            Coordinate nearestCentroidDistance = std::numeric_limits<Coordinate>::max();
+            size_t nearestCentroidIndex = 0;
+            for (size_t centroidIndex = 0u; centroidIndex < numberOfClusters; centroidIndex++) {
+                const Centroid &centroid = centroids[centroidIndex];
+                const Coordinate centroidDistance = distance(points[pointIndex], centroid);
+                if (centroidDistance < nearestCentroidDistance) {
+                    nearestCentroidDistance = centroidDistance;
+                    nearestCentroidIndex = centroid.clusterLabel;
+                }
             }
-        }
 
-        pointLabels[pointIndex] = centroids[nearestCentroidIndex].clusterLabel;
+            pointLabels[pointIndex] = centroids[nearestCentroidIndex].clusterLabel;
+            pointIndex++;
+        }
     }
 
     bool changed = false;
