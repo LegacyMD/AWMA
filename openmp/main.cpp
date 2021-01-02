@@ -100,7 +100,7 @@ int main(int argc, const char **argv) {
     if (params.hasRandomSeed) {
         RandomHelper::init(params.randomSeed);
     }
-    Implementation update = getImplementation(params.implementationIndex);
+    auto implementation = getImplementation(params.implementationIndex);
     if (params.verbose) {
         params.display();
     }
@@ -116,6 +116,12 @@ int main(int argc, const char **argv) {
     }
     timer.end();
     const auto totalInitTimeUs = timer.getUs().count();
+
+    // Upload data
+    timer.start();
+    auto data = implementation->upload(points, pointLabels, centroids, points.size(), centroids.size());
+    timer.end();
+    const auto totalUploadTimeUs = timer.getUs().count();
 
     // Display what has been loaded
     if (params.verbose) {
@@ -151,7 +157,7 @@ int main(int argc, const char **argv) {
         totalCsvTimeUs += timer.getUs().count();
 
         timer.start();
-        converged = !update(points, pointLabels, centroids, points.size(), centroids.size());
+        converged = !implementation->update(data);
         timer.end();
         totalClusteringTimeUs += timer.getUs().count();
 
@@ -163,10 +169,14 @@ int main(int argc, const char **argv) {
         std::cout << std::endl;
     }
 
+    // Cleanup
+    implementation->cleanup(data);
+
     // Print total timings
     if (params.verbose) {
         std::cout << "Summary:\n";
         std::cout << "\tInit time: " << totalInitTimeUs << "us = " << totalInitTimeUs / 1000 << "ms\n";
+        std::cout << "\tUpload time: " << totalUploadTimeUs << "us = " << totalUploadTimeUs / 1000 << "ms\n";
         std::cout << "\tClustering time: " << totalClusteringTimeUs << "us = " << totalClusteringTimeUs / 1000 << "ms\n";
         std::cout << "\tCsv writing time: " << totalCsvTimeUs << "us = " << totalCsvTimeUs / 1000 << "ms\n\n";
     } else {
