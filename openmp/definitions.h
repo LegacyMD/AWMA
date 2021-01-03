@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <limits>
 
-using Coordinate = double;
+using Coordinate = float;
 using Label = uint32_t;
 constexpr static Label invalidLabel = std::numeric_limits<Label>::max();
 

@@ -44,6 +44,7 @@ target_link_libraries(kmeans_openmp PRIVATE OpenMP::OpenMP_CXX)
 # OpenCL
 find_package(OpenCL REQUIRED)
 set(SOURCES_OPENCL
+    implementation/ocl/updateOcl.cpp
     implementation/ocl/updateOcl.h
     implementation/ocl/utils.h
 )
