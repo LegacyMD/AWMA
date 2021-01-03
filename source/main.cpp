@@ -7,7 +7,6 @@
 
 #include <fstream>
 #include <iostream>
-#include <omp.h>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -131,15 +130,6 @@ int main(int argc, const char **argv) {
                   << '\t' << points.size() << " points\n"
                   << '\t' << centroids.size() << " clusters\n"
                   << std::endl;
-    }
-
-    // Print general system info
-    if (params.verbose) {
-        std::cout << "Execution environment:\n";
-        std::cout << "\tstd::thread::hardware_concurrency = " << std::thread::hardware_concurrency() << '\n';
-        std::cout << "\tomp_get_num_procs = " << omp_get_num_procs() << '\n';
-        std::cout << "\tomp_get_max_threads = " << omp_get_max_threads() << '\n';
-        std::cout << std::endl;
     }
 
     // Run clustering
