@@ -8,7 +8,7 @@ while 1
        break
     end
     table = table2array(readtable(fileName));
-    sortrows(table, 1)
+    sortrows(table, 1);
     pointsLabel = table(:, 1);
     pointsX = table(:, 2);
     pointsY = table(:, 3);
@@ -18,7 +18,7 @@ while 1
        break
     end
     table = table2array(readtable(fileName));
-    sortrows(table, 1)
+    sortrows(table, 1);
     centroidsLabel = table(:, 1);
     centroidsX = table(:, 2);
     centroidsY = table(:, 3);
