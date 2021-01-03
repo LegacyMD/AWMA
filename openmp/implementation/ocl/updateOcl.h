@@ -43,6 +43,11 @@ private:
         cl_uint numberOfPoints;
         cl_uint numberOfClusters;
         int currentBufferIndex;
+
+        // Iteration data (for returning to dump csv each frame)
+        std::vector<Point> pointsToReturn;
+        std::vector<Label> pointLabelsToReturn;
+        std::vector<Centroid> centroidsToReturn;
     };
 
     void uploadOclContext(OclData *data);
@@ -55,6 +60,8 @@ public:
                  std::vector<Centroid> &centroids, size_t numberOfPoints, size_t numberOfClusters) override;
 
     void cleanup(void *data) override;
+
+    IterationData getIterationData(void *rawData) override;
 
     bool update(void *rawData) override;
 };

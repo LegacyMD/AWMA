@@ -12,18 +12,20 @@
 #include <string>
 #include <thread>
 
-void dumpCsv(size_t iteration, const std::vector<Point> &points, const std::vector<Label> pointLabels, const std::vector<Centroid> &centroids) {
+void dumpCsv(size_t iteration, Implementation &implementation, void *data) {
+    auto iterationData = implementation.getIterationData(data);
+
     const std::string fileName = std::string{CSV_PATH} + "points_" + std::to_string(iteration) + ".csv";
     std::ofstream file{fileName};
-    for (auto i = 0u; i < points.size(); i++) {
-        file << pointLabels[i] << ','
-             << points[i].x << ','
-             << points[i].y << '\n';
+    for (auto i = 0u; i < iterationData.points.size(); i++) {
+        file << iterationData.pointLabels[i] << ','
+             << iterationData.points[i].x << ','
+             << iterationData.points[i].y << '\n';
     }
 
     const std::string fileNameCentroids = std::string{CSV_PATH} + "centroids_" + std::to_string(iteration) + ".csv";
     std::ofstream fileCentroids{fileNameCentroids};
-    for (const Centroid &centroid : centroids) {
+    for (const Centroid &centroid : iterationData.centroids) {
         fileCentroids << centroid.clusterLabel << ','
                       << centroid.x << ','
                       << centroid.y << '\n';
@@ -151,7 +153,7 @@ int main(int argc, const char **argv) {
     for (; iteration < params.maxIterations && !converged; iteration++) {
         timer.start();
         if (params.writeCsv) {
-            dumpCsv(iteration, points, pointLabels, centroids);
+            dumpCsv(iteration, *implementation, data);
         }
         timer.end();
         totalCsvTimeUs += timer.getUs().count();

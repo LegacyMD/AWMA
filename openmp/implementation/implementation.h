@@ -14,6 +14,13 @@ struct Implementation {
     // Returns true if some centroid changed
     virtual bool update(void *data) = 0;
 
+    struct IterationData {
+        const std::vector<Point> &points;
+        const std::vector<Label> &pointLabels;
+        const std::vector<Centroid> &centroids;
+    };
+    virtual IterationData getIterationData(void *data) = 0;
+
     // De-allocated all memory allocated by UploadFunction
     virtual void cleanup(void *data) = 0;
 };
@@ -43,6 +50,14 @@ struct CpuImplementation : Implementation {
     virtual bool cpuUpdate(CpuData &data) = 0;
     bool update(void *data) {
         return cpuUpdate(*static_cast<CpuData *>(data));
+    }
+
+    IterationData getIterationData(void *rawData) override {
+        CpuData *data = static_cast<CpuData *>(rawData);
+        return IterationData{
+            data->points,
+            data->pointLabels,
+            data->centroids};
     }
 
     void cleanup(void *data) override {

@@ -140,6 +140,33 @@ void OclImplementation::cleanup(void *data) {
     delete oclData;
 }
 
+OclImplementation::IterationData OclImplementation::getIterationData(void *rawData) {
+    OclData &data = *static_cast<OclData *>(rawData);
+
+    data.pointsToReturn.resize(data.numberOfPoints);
+    ASSERT_CL_SUCCESS(clEnqueueReadBuffer(data.queue, data.points, CL_BLOCKING, 0, data.pointsSize, data.pointsToReturn.data(), 0, nullptr, nullptr));
+
+    data.pointLabelsToReturn.resize(data.numberOfPoints);
+    ASSERT_CL_SUCCESS(clEnqueueReadBuffer(data.queue, data.pointLabels, CL_BLOCKING, 0, data.pointLabelsSize, data.pointLabelsToReturn.data(), 0, nullptr, nullptr));
+
+    std::vector<Coordinate> centroidCoords = {};
+    std::vector<Label> centroidLabels = {};
+    centroidCoords.resize(2 * data.numberOfClusters);
+    centroidLabels.resize(data.numberOfClusters);
+    ASSERT_CL_SUCCESS(clEnqueueReadBuffer(data.queue, data.centroidCoords[data.currentBufferIndex], CL_BLOCKING, 0, data.centroidCoordsSize, centroidCoords.data(), 0, nullptr, nullptr));
+    ASSERT_CL_SUCCESS(clEnqueueReadBuffer(data.queue, data.centroidLabels, CL_BLOCKING, 0, data.centroidLabelsSize, centroidLabels.data(), 0, nullptr, nullptr));
+    data.centroidsToReturn.clear();
+    for (size_t i = 0; i < data.numberOfClusters; i++) {
+        Centroid centroid{centroidLabels[i], centroidCoords[i * 2], centroidCoords[i * 2 + 1]};
+        data.centroidsToReturn.push_back(centroid);
+    }
+
+    return IterationData{
+        data.pointsToReturn,
+        data.pointLabelsToReturn,
+        data.centroidsToReturn};
+}
+
 bool OclImplementation::update(void *rawData) {
     OclData &data = *static_cast<OclData *>(rawData);
     const auto inputIndex = data.currentBufferIndex;
