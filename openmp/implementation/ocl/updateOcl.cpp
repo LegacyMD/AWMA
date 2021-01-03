@@ -170,7 +170,7 @@ OclImplementation::IterationData OclImplementation::getIterationData(void *rawDa
 bool OclImplementation::update(void *rawData) {
     OclData &data = *static_cast<OclData *>(rawData);
     const auto inputIndex = data.currentBufferIndex;
-    const auto outputIndex = !data.currentBufferIndex;
+    const auto outputIndex = (data.currentBufferIndex + 1) % 2;
     data.currentBufferIndex = outputIndex;
 
     // Clear temporary allocations
@@ -192,16 +192,6 @@ bool OclImplementation::update(void *rawData) {
     size_t gws = data.numberOfPoints;
     const size_t *lws = nullptr;
     ASSERT_CL_SUCCESS(clEnqueueNDRangeKernel(data.queue, data.kernelFindClosestClusters, 1, gwo, &gws, lws, 0, nullptr, nullptr));
-
-    // DEBUG CODE
-    /*
-    auto a = std::make_unique<cl_uint[]>(data.numberOfClusters);
-    ASSERT_CL_SUCCESS(clEnqueueReadBuffer(data.queue, data.centroidDivisors, CL_BLOCKING, 0, data.centroidDivisorsSize, a.get(), 0, nullptr, nullptr));
-    auto b = std::make_unique<Coordinate[]>(2 * data.numberOfClusters);
-    ASSERT_CL_SUCCESS(clEnqueueReadBuffer(data.queue, data.centroidSums, CL_BLOCKING, 0, data.centroidSumsSize, b.get(), 0, nullptr, nullptr));
-    auto c = std::make_unique<cl_uint[]>(data.numberOfPoints);
-    ASSERT_CL_SUCCESS(clEnqueueReadBuffer(data.queue, data.pointLabels, CL_BLOCKING, 0, data.pointLabelsSize, c.get(), 0, nullptr, nullptr));
-    */
 
     // updateCentroids
     argIndex = 0;

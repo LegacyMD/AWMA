@@ -64,7 +64,7 @@ __kernel void updateCentroids(
     __read_only __global DATATYPE *inCentroids,
     uint inNumberOfPoints,
     // Output args
-    __write_only __global uint *outCentroids,
+    __write_only __global DATATYPE*outCentroids,
     __write_only __global uint *outCentroidsChanged) {
 
     // Get my centroid
